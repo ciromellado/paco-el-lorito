@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#70c5ce">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Paco Loro">
+    <link rel="apple-touch-icon" href="images/icon-192.png">
+    <link rel="manifest" href="manifest.json">
+
+    <title>Paco: El Loro Parlanchín / The Chatty Parrot</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            height: 600px;
+            max-height: 100vh;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #70c5ce;
+            touch-action: none;
+            margin: 0 auto;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #70c5ce;
+        }
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .lang-btn {
+            background: #ffcc00;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #333;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        .lang-btn:active { transform: scale(0.95); }
+        .score-display {
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .center-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 25px;
+            border-radius: 16px;
+            width: 90%;
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .center-screen h1 {
+            font-size: 22px;
+            color: #ffcc00;
+            margin-bottom: 15px;
+        }
+        .instructions-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #ffcc00;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #fff;
+        }
+        .instructions-box strong { color: #ffcc00; }
+        .action-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(40, 167, 69, 0.4);
+            margin-top: 5px;
+            width: 100%;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .action-btn:hover { background: #218838; }
+        .action-btn:active { transform: scale(0.97); }
+        .install-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 123, 255, 0.4);
+            margin-top: 8px;
+            width: 100%;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .install-btn:hover { background: #0056b3; }
+        .install-btn:active { transform: scale(0.97); }
+        .donate-btn {
+            background: #ff5e62;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(255, 94, 98, 0.4);
+            margin-top: 12px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .donate-btn:hover { background: #e0484c; }
+        .donate-btn:active { transform: scale(0.97); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        
+        <div class="ui-layer">
+            <div class="top-bar">
+                <button class="lang-btn" id="langToggle">🇺🇸 EN</button>
+                <div class="score-display" id="scoreDisplay">0</div>
+            </div>
+
+            <div id="startScreen" class="center-screen">
+                <h1 id="titleText">Paco: El Loro Parlanchín</h1>
+                <div id="instructionText" class="instructions-box"></div>
+                <button class="action-btn" id="startBtn">¡A Volar!</button>
+                <button class="install-btn hidden" id="installBtn">📱 Instalar App</button>
+                <a href="https://ko-fi.com/ciroypaco" target="_blank" class="donate-btn" id="donateTextStart">🫓 Donar una arepita a Paco</a>
+            </div>
+
+            <div id="gameOverScreen" class="center-screen hidden">
+                <h1 id="gameOverTitle">¡Pachanga rota!</h1>
+                <p id="quoteText" style="font-style: italic; color: #ffcc00; margin-bottom: 15px;">"¡Me mareé!"</p>
+                <p style="font-size: 16px;"><span id="finalScoreLabel">Puntuación:</span> <strong id="finalScore" style="color: #fff; font-size: 20px;">0</strong></p>
+                <p style="color: #aaa; font-size: 14px; margin-top: 5px; margin-bottom: 20px;">🏆 Récord: <span id="highScoreDisplay" style="color: #fff;">0</span></p>
+                <button class="action-btn" id="restartBtn">Jugar de nuevo</button>
+                <a href="https://ko-fi.com/ciroypaco" target="_blank" class="donate-btn" id="donateTextOver">🫓 Donar una arepita a Paco</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+             
+        const parrotVE = new Image();
+        parrotVE.src = 'images/loritovenezolano.png';
+        parrotVE.onerror = () => console.warn('No se pudo cargar loritovenezolano.png');
+
+        const parrotUS = new Image();
+        parrotUS.src = 'images/lorito-gringo.png';
+        parrotUS.onerror = () => console.warn('No se pudo cargar lorito-gringo.png');
+
+        let lang = 'es';
+        const texts = {
+            es: {
+                title: "Paco: El Loro Parlanchín",
+                instruction: "⌨️ Presiona <strong>ESPACIO</strong> o 👆 <strong>TOCA</strong> la pantalla para volar.<br>🚫 Evita chocar con los tubos verdes o el suelo.<br>⭐ ¡Gana <strong>1 punto</strong> por cada tubo que cruces!",
+                startBtn: "¡A Volar!",
+                gameOver: "¡Pachanga rota!",
+                scoreLabel: "Puntuación:",
+                restartBtn: "Jugar de nuevo",
+                installBtn: "📱 Instalar App",
+                donate: "🫓 Donar una arepita a Paco",
+                quotes: ["¡Ajá! ¡Cuidado con el tubo, vale!", "¡Samba tropical y sabrosa!", "¡Vuelo con flow venezolano!", "¡Pilas con ese concreto!"],
+                crashQuotes: ["¡Ay mi madre, me mareé!", "¡Se cayó el sistema, chamo!", "¡Chocarse no estaba en el plan!"]
+            },
+            en: {
+                title: "Paco: The Chatty Parrot",
+                instruction: "⌨️ Press <strong>SPACE</strong> or 👆 <strong>TAP</strong> the screen to fly.<br>🚫 Avoid crashing into green pipes or the ground.<br>⭐ Score <strong>1 point</strong> for every pipe you pass!",
+                startBtn: "Let's Fly!",
+                gameOver: "Party Over!",
+                scoreLabel: "Score:",
+                restartBtn: "Play Again",
+                installBtn: "📱 Install App",
+                donate: "🫓 Buy Paco an arepa",
+                quotes: ["Watch out for that pipe, boss!", "Smooth tropical flight!", "Flying with cool style!", "Keep your eyes ahead!"],
+                crashQuotes: ["Oh man, I'm dizzy!", "System crashed, buddy!", "Landing wasn't in the brochure!"]
+            }
+        };
+
+        let gameState = 'START'; 
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('pacoHighScore')) || 0;
+        let currentQuote = "";
+        let quoteTimer = 0;
+        let audioCtx = null;
+
+        let bird = { x: 80, y: 250, width: 48, height: 38, gravity: 0.5, lift: -8, velocity: 0 };
+        let pipes = [];
+        let pipeWidth = 60, pipeGap = 150, pipeSpeed = 3, frameCount = 0;
+
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+        const langToggle = document.getElementById('langToggle');
+        const titleText = document.getElementById('titleText');
+        const instructionText = document.getElementById('instructionText');
+        const startBtn = document.getElementById('startBtn');
+        const installBtn = document.getElementById('installBtn');
+        const gameOverTitle = document.getElementById('gameOverTitle');
+        const quoteText = document.getElementById('quoteText');
+        const finalScoreLabel = document.getElementById('finalScoreLabel');
+        const finalScore = document.getElementById('finalScore');
+        const restartBtn = document.getElementById('restartBtn');
+        const donateTextStart = document.getElementById('donateTextStart');
+        const donateTextOver = document.getElementById('donateTextOver');
+
+        function updateUI() {
+            titleText.innerText = texts[lang].title;
+            instructionText.innerHTML = texts[lang].instruction;
+            startBtn.innerText = texts[lang].startBtn;
+            installBtn.innerText = texts[lang].installBtn;
+            gameOverTitle.innerText = texts[lang].gameOver;
+            finalScoreLabel.innerText = texts[lang].scoreLabel;
+            restartBtn.innerText = texts[lang].restartBtn;
+            donateTextStart.innerText = texts[lang].donate;
+            donateTextOver.innerText = texts[lang].donate;
+            langToggle.innerText = lang === 'es' ? '🇺🇸 EN' : '🇻🇪 ES';
+        }
+
+        langToggle.addEventListener('click', () => { lang = lang === 'es' ? 'en' : 'es'; updateUI(); });
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (gameState === 'START' || gameState === 'GAMEOVER') startGame();
+                else if (gameState === 'PLAYING') jump();
+            }
+        });
+
+        canvas.addEventListener('click', () => { if (gameState === 'PLAYING') jump(); });
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'PLAYING') jump();
+        }, { passive: false });
+
+        function startGame() {
+            bird.y = 250; bird.velocity = 0; pipes = []; score = 0; frameCount = 0;
+            scoreDisplay.innerText = score;
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            gameState = 'PLAYING';
+            triggerQuote(false);
+            initAudio();
+        }
+
+        function jump() {
+            bird.velocity = bird.lift;
+            playJumpSound();
+            triggerQuote(false);
+        }
+
+        function triggerQuote(isCrash) {
+            const arr = isCrash ? texts[lang].crashQuotes : texts[lang].quotes;
+            currentQuote = arr[Math.floor(Math.random() * arr.length)];
+            quoteTimer = 90;
+        }
+
+        function spawnPipe() {
+            let minHeight = 50;
+            let maxHeight = canvas.height - pipeGap - 120;
+            let height = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+            pipes.push({ x: canvas.width, topHeight: height, bottomY: height + pipeGap, passed: false });
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            bird.velocity += bird.gravity;
+            bird.y += bird.velocity;
+
+            if (bird.y + bird.height / 2 >= canvas.height - 80 || bird.y - bird.height / 2 <= 0) {
+                gameOver();
+            }
+
+            if (frameCount % 100 === 0) spawnPipe();
+
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].x -= pipeSpeed;
+                const hitboxPadding = 8;
+                if (
+                    bird.x + bird.width / 2 - hitboxPadding > pipes[i].x &&
+                    bird.x - bird.width / 2 + hitboxPadding < pipes[i].x + pipeWidth &&
+                    (bird.y - bird.height / 2 + hitboxPadding < pipes[i].topHeight || 
+                     bird.y + bird.height / 2 - hitboxPadding > pipes[i].bottomY)
+                ) {
+                    gameOver();
+                }
+
+                if (!pipes[i].passed && pipes[i].x + pipeWidth < bird.x) {
+                    pipes[i].passed = true;
+                    score++;
+                    playScoreSound();
+                    scoreDisplay.innerText = score;
+                }
+
+                if (pipes[i].x + pipeWidth < 0) pipes.splice(i, 1);
+            }
+
+            if (quoteTimer > 0) quoteTimer--;
+            frameCount++;
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            playGameOverSound();
+            triggerQuote(true);
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('pacoHighScore', highScore);
+            }
+            finalScore.innerText = score;
+            highScoreDisplay.innerText = highScore;
+            quoteText.innerText = `"${currentQuote}"`;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        // ==========================================
+        // FUNCIÓN: Dibuja el tubo con efecto 3D
+        // ==========================================
+        function drawPipe(x, topHeight, bottomY) {
+            const capHeight = 26;
+            const capOverhang = 8;
+            const capWidth = pipeWidth + (capOverhang * 2);
+            const capX = x - capOverhang;
+            const cornerRadius = 8;
+
+            // --- TUBO SUPERIOR ---
+            let gradient = ctx.createLinearGradient(x, 0, x + pipeWidth, 0);
+            gradient.addColorStop(0, "#1e8449");
+            gradient.addColorStop(0.2, "#2ecc71");
+            gradient.addColorStop(0.5, "#58d68d");
+            gradient.addColorStop(0.8, "#27ae60");
+            gradient.addColorStop(1, "#145a32");
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x, 0, pipeWidth, topHeight);
+            
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)"; // Brillo izquierdo
+            ctx.fillRect(x + 4, 0, 6, topHeight);
+            
+            ctx.fillStyle = "rgba(0, 0, 0, 0.2)"; // Sombra derecha
+            ctx.fillRect(x + pipeWidth - 8, 0, 8, topHeight);
+
+            let capGradient = ctx.createLinearGradient(capX, topHeight - capHeight, capX + capWidth, topHeight);
+            capGradient.addColorStop(0, "#229954");
+            capGradient.addColorStop(0.3, "#2ecc71");
+            capGradient.addColorStop(0.6, "#58d68d");
+            capGradient.addColorStop(1, "#1e8449");
+            
+            ctx.fillStyle = capGradient;
+            if (ctx.roundRect) {
+                ctx.beginPath(); ctx.roundRect(capX, topHeight - capHeight, capWidth, capHeight, cornerRadius); ctx.fill();
+            } else {
+                ctx.fillRect(capX, topHeight - capHeight, capWidth, capHeight);
+            }
+            
+            ctx.strokeStyle = "#145a32"; ctx.lineWidth = 3;
+            if (ctx.roundRect) {
+                ctx.beginPath(); ctx.roundRect(capX, topHeight - capHeight, capWidth, capHeight, cornerRadius); ctx.stroke();
+            } else {
+                ctx.strokeRect(capX, topHeight - capHeight, capWidth, capHeight);
+            }
+
+            // --- TUBO INFERIOR ---
+            let gradientBottom = ctx.createLinearGradient(x, bottomY, x + pipeWidth, bottomY);
+            gradientBottom.addColorStop(0, "#1e8449");
+            gradientBottom.addColorStop(0.2, "#2ecc71");
+            gradientBottom.addColorStop(0.5, "#58d68d");
+            gradientBottom.addColorStop(0.8, "#27ae60");
+            gradientBottom.addColorStop(1, "#145a32");
+            
+            ctx.fillStyle = gradientBottom;
+            ctx.fillRect(x, bottomY, pipeWidth, canvas.height - bottomY - 80);
+            
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+            ctx.fillRect(x + 4, bottomY, 6, canvas.height - bottomY - 80);
+            
+            ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+            ctx.fillRect(x + pipeWidth - 8, bottomY, 8, canvas.height - bottomY - 80);
+
+            let capGradientBottom = ctx.createLinearGradient(capX, bottomY, capX + capWidth, bottomY + capHeight);
+            capGradientBottom.addColorStop(0, "#229954");
+            capGradientBottom.addColorStop(0.3, "#2ecc71");
+            capGradientBottom.addColorStop(0.6, "#58d68d");
+            capGradientBottom.addColorStop(1, "#1e8449");
+            
+            ctx.fillStyle = capGradientBottom;
+            if (ctx.roundRect) {
+                ctx.beginPath(); ctx.roundRect(capX, bottomY, capWidth, capHeight, cornerRadius); ctx.fill();
+            } else {
+                ctx.fillRect(capX, bottomY, capWidth, capHeight);
+            }
+            
+            ctx.strokeStyle = "#145a32"; ctx.lineWidth = 3;
+            if (ctx.roundRect) {
+                ctx.beginPath(); ctx.roundRect(capX, bottomY, capWidth, capHeight, cornerRadius); ctx.stroke();
+            } else {
+                ctx.strokeRect(capX, bottomY, capWidth, capHeight);
+            }
+        }
+
+        // ==========================================
+        // FUNCIÓN PRINCIPAL DE DIBUJO
+        // ==========================================
+        function draw() {
+            ctx.fillStyle = "#70c5ce";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let p of pipes) {
+                drawPipe(p.x, p.topHeight, p.bottomY);
+            }
+
+            ctx.fillStyle = "#ded895";
+            ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
+            ctx.fillStyle = "#8b4513";
+            ctx.fillRect(0, canvas.height - 80, canvas.width, 10);
+
+            const activeParrotImage = (lang === 'es') ? parrotVE : parrotUS;
+            if (activeParrotImage.complete && activeParrotImage.naturalHeight !== 0) {
+                ctx.drawImage(activeParrotImage, bird.x - bird.width / 2, bird.y - bird.height / 2, bird.width, bird.height);
+            } else {
+                ctx.fillStyle = "#ffcc00";
+                ctx.fillRect(bird.x - bird.width / 2, bird.y - bird.height / 2, bird.width, bird.height);
+                ctx.fillStyle = "#000";
+                ctx.fillRect(bird.x + bird.width/4, bird.y - bird.height/4, 6, 6);
+            }
+
+            if (quoteTimer > 0) {
+                ctx.save();
+                ctx.font = "bold 13px sans-serif";
+                let textWidth = ctx.measureText(currentQuote).width;
+                let idealBubbleX = bird.x - textWidth / 2;
+                let margin = 15;
+                let bubbleX = Math.max(margin, Math.min(idealBubbleX, canvas.width - textWidth - margin));
+                let bubbleY = bird.y - 40;
+
+                ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(bubbleX - 8, bubbleY - 14, textWidth + 16, 26, 8);
+                } else {
+                    ctx.rect(bubbleX - 8, bubbleY - 14, textWidth + 16, 26);
+                }
+                ctx.fill();
+                ctx.strokeStyle = "#333";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.fillStyle = "#222";
+                ctx.fillText(currentQuote, bubbleX, bubbleY + 4);
+                ctx.restore();
+            }
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } 
+                catch (e) { console.warn('AudioContext no disponible'); }
+            }
+        }
+
+        function playJumpSound() {
+            try {
+                if (!audioCtx) return;
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } catch (e) {}
+        }
+
+        function playScoreSound() {
+            try {
+                if (!audioCtx) return;
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); 
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.08); 
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            } catch (e) {}
+        }
+
+        function playGameOverSound() {
+            try {
+                if (!audioCtx) return;
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } catch (e) {}
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        updateUI();
+        gameLoop();    
+    </script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((registration) => console.log('✅ Service Worker registrado:', registration.scope))
+                    .catch((error) => console.log('❌ Error al registrar el Service Worker:', error));
+            });
+        }
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`Resultado de instalación: ${outcome}`);
+            deferredPrompt = null;
+            installBtn.classList.add('hidden');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.classList.add('hidden');
+            console.log('✅ PWA instalada correctamente');
+        });
+    </script>
+</body>
+</html>
