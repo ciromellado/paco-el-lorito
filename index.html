@@ -10,6 +10,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Paco Loro">
     <link rel="apple-touch-icon" href="images/icon-192.png">
+    <link rel="icon" href="images/icon-192.png" type="image/png">
     <link rel="manifest" href="manifest.json">
 
     <title>Paco: El Loro Parlanchín / The Chatty Parrot</title>
@@ -233,13 +234,13 @@
         const texts = {
             es: {
                 title: "Paco: El Loro Parlanchín",
-                instruction: "⌨️ Presiona <strong>ESPACIO</strong> o 👆 <strong>TOCA</strong> la pantalla para volar.<br>🚫 Nivel 1: Evita los tubos verdes.<br>🌿 Nivel 2 (100 pts): ¡Los tubos de abajo tienen plantas carnívoras que te comen!<br>⭐ Gana <strong>1 punto</strong> por cada obstáculo.",
+                instruction: "⌨️ Presiona <strong>ESPACIO</strong> o 👆 <strong>TOCA</strong> la pantalla para volar.<br>🚫 Nivel 1: Evita los tubos verdes.<br> Nivel 2 (100 pts): ¡Los tubos de abajo tienen plantas carnívoras que te comen!<br>⭐ Gana <strong>1 punto</strong> por cada obstáculo.",
                 startBtn: "¡A Volar!",
                 gameOver: "¡Pachanga rota!",
                 scoreLabel: "Puntuación:",
                 restartBtn: "Jugar de nuevo",
-                installBtn: "📱 Instalar App",
-                donate: "🫓 Donar una arepita a Paco",
+                installBtn: " Instalar App",
+                donate: " Donar una arepita a Paco",
                 quotes: ["¡Ajá! ¡Cuidado con el tubo, vale!", "¡Samba tropical y sabrosa!", "¡Vuelo con flow venezolano!", "¡Pilas con ese concreto!"],
                 crashQuotes: ["¡Ay mi madre, me mareé!", "¡Se cayó el sistema, chamo!", "¡Chocarse no estaba en el plan!"],
                 plantCrashQuotes: ["¡Me comió la planta, chamo!", "¡Planta 1, Paco 0!", "¡Qué hambre tenían esas cosas!", "¡Auxilio, soy comida de planta!", "¡Ñam ñam, me atraparon!"]
@@ -251,8 +252,8 @@
                 gameOver: "Party Over!",
                 scoreLabel: "Score:",
                 restartBtn: "Play Again",
-                installBtn: " Install App",
-                donate: " Buy Paco an arepa",
+                installBtn: "📱 Install App",
+                donate: "🫓 Buy Paco an arepa",
                 quotes: ["Watch out for that pipe, boss!", "Smooth tropical flight!", "Flying with cool style!", "Keep your eyes ahead!"],
                 crashQuotes: ["Oh man, I'm dizzy!", "System crashed, buddy!", "Landing wasn't in the brochure!"],
                 plantCrashQuotes: ["The plant ate me, man!", "Plant 1, Paco 0!", "Those things were hungry!", "Help, I'm plant food!", "Nom nom, they got me!"]
@@ -303,7 +304,7 @@
             restartBtn.innerText = texts[lang].restartBtn;
             donateTextStart.innerText = texts[lang].donate;
             donateTextOver.innerText = texts[lang].donate;
-            langToggle.innerText = lang === 'es' ? '🇺🇸 EN' : '🇻🇪 ES';
+            langToggle.innerText = lang === 'es' ? '🇸 EN' : '🇻 ES';
         }
 
         langToggle.addEventListener('click', () => { lang = lang === 'es' ? 'en' : 'es'; updateUI(); });
@@ -792,6 +793,9 @@
     </script>
     
     <script>
+        // ==========================================
+        // SERVICE WORKER
+        // ==========================================
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./service-worker.js')
@@ -820,22 +824,41 @@
             installBtn.classList.add('hidden');
             console.log('✅ PWA instalada correctamente');
         });
-         // CONTADOR DE VISITAS (CountAPI)
+
+        // ==========================================
+        // CONTADOR DE VISITAS HÍBRIDO (Global + Respaldo Local)
         // ==========================================
         function updateVisitCounter() {
             const counterElement = document.getElementById('visit-counter');
-            // Usamos un namespace único: 'ciroypaco-paco'
-            const apiUrl = 'https://api.counterapi.dev/v1/ciroypaco-paco/visitas/up';
+            // API actualizada a countapi.xyz (counterapi.dev fue eliminada)
+            const apiUrl = 'https://api.countapi.xyz/hit/ciroypaco-paco/visitas';
             
             fetch(apiUrl)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error('API no responde');
+                    return response.json();
+                })
                 .then(data => {
-                    // Formatea el número con comas (ej: 1,234)
-                    counterElement.innerText = data.count.toLocaleString();
+                    // ¡Éxito! Mostramos el número global
+                    counterElement.innerText = data.value.toLocaleString();
+                    // Lo guardamos en memoria por si la API cae mañana
+                    localStorage.setItem('pacoLastGlobalCount', data.value);
                 })
                 .catch(error => {
-                    console.warn('No se pudo cargar el contador:', error);
-                    counterElement.innerText = '∞'; // Muestra un infinito si falla
+                    // PLAN B: La API está caída o no hay internet
+                    console.warn('Contador global caído, activando modo local:', error);
+                    
+                    // Obtenemos las visitas locales de este dispositivo
+                    let localVisits = parseInt(localStorage.getItem('pacoLocalVisits')) || 0;
+                    localVisits++; // Sumamos la visita actual
+                    localStorage.setItem('pacoLocalVisits', localVisits);
+                    
+                    // Obtenemos el último número global que conocimos
+                    let lastKnownGlobal = parseInt(localStorage.getItem('pacoLastGlobalCount')) || 0;
+                    
+                    // Mostramos el número más alto entre el global guardado y el local
+                    let finalCount = Math.max(lastKnownGlobal, localVisits);
+                    counterElement.innerText = finalCount.toLocaleString();
                 });
         }
 
