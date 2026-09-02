@@ -36,5 +36,5 @@ Mientras el pajarito original descansa en el olimpo de los juegos "inexistentes"
 Como es una PWA, puedes ejecutarlo localmente o subirlo a cualquier hosting estático.
 
 ### Opción 1: Ejecutar 
-Lo puedes ejecutar desde aquí: https://paco-el-lorito.netlify.app/
+Lo puedes ejecutar desde aquí:https://ciromellado.github.io/paco-el-lorito/
 o descargas los archivos de github y lo ejecutas localmente
