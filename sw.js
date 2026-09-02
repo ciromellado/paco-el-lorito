@@ -1,5 +1,5 @@
 // Service Worker simple y funcional para Paco el Loro
-const CACHE_NAME = 'paco-loro-v10';
+const CACHE_NAME = 'paco-loro-v11';
 const urlsToCache = [
   '/',
   '/index.html',
