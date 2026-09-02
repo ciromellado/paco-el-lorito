@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -215,11 +216,16 @@
         parrotUS.src = 'images/lorito-gringo.png';
         parrotUS.onerror = () => console.warn('No se pudo cargar lorito-gringo.png');
 
+        // Imagen: Planta carnívora con maceta
+        const carnivorousPlant = new Image();
+        carnivorousPlant.src = 'images/planta-carnivora.png';
+        carnivorousPlant.onerror = () => console.warn('No se pudo cargar planta-carnivora.png');
+
         let lang = 'es';
         const texts = {
             es: {
                 title: "Paco: El Loro Parlanchín",
-                instruction: "⌨️ Presiona <strong>ESPACIO</strong> o 👆 <strong>TOCA</strong> la pantalla para volar.<br>🚫 Evita chocar con los tubos verdes o el suelo.<br>⭐ ¡Gana <strong>1 punto</strong> por cada tubo que cruces!",
+                instruction: "⌨️ Presiona <strong>ESPACIO</strong> o 👆 <strong>TOCA</strong> la pantalla para volar.<br>🚫 Nivel 1: Evita los tubos verdes.<br>🌿 Nivel 2 (100 pts): ¡Los tubos de abajo tienen plantas carnívoras!<br>⭐ Gana <strong>1 punto</strong> por cada obstáculo.",
                 startBtn: "¡A Volar!",
                 gameOver: "¡Pachanga rota!",
                 scoreLabel: "Puntuación:",
@@ -227,11 +233,12 @@
                 installBtn: "📱 Instalar App",
                 donate: "🫓 Donar una arepita a Paco",
                 quotes: ["¡Ajá! ¡Cuidado con el tubo, vale!", "¡Samba tropical y sabrosa!", "¡Vuelo con flow venezolano!", "¡Pilas con ese concreto!"],
-                crashQuotes: ["¡Ay mi madre, me mareé!", "¡Se cayó el sistema, chamo!", "¡Chocarse no estaba en el plan!"]
+                crashQuotes: ["¡Ay mi madre, me mareé!", "¡Se cayó el sistema, chamo!", "¡Chocarse no estaba en el plan!"],
+                plantCrashQuotes: ["¡Me comió la planta, chamo!", "¡Planta 1, Paco 0!", "¡Qué hambre tenían esas cosas!", "¡Auxilio, soy comida de planta!"]
             },
             en: {
                 title: "Paco: The Chatty Parrot",
-                instruction: "⌨️ Press <strong>SPACE</strong> or 👆 <strong>TAP</strong> the screen to fly.<br>🚫 Avoid crashing into green pipes or the ground.<br>⭐ Score <strong>1 point</strong> for every pipe you pass!",
+                instruction: "⌨️ Press <strong>SPACE</strong> or 👆 <strong>TAP</strong> the screen to fly.<br> Level 1: Avoid green pipes.<br>🌿 Level 2 (100 pts): The bottom pipes have carnivorous plants!<br>⭐ Score <strong>1 point</strong> per obstacle.",
                 startBtn: "Let's Fly!",
                 gameOver: "Party Over!",
                 scoreLabel: "Score:",
@@ -239,12 +246,15 @@
                 installBtn: "📱 Install App",
                 donate: "🫓 Buy Paco an arepa",
                 quotes: ["Watch out for that pipe, boss!", "Smooth tropical flight!", "Flying with cool style!", "Keep your eyes ahead!"],
-                crashQuotes: ["Oh man, I'm dizzy!", "System crashed, buddy!", "Landing wasn't in the brochure!"]
+                crashQuotes: ["Oh man, I'm dizzy!", "System crashed, buddy!", "Landing wasn't in the brochure!"],
+                plantCrashQuotes: ["The plant ate me, man!", "Plant 1, Paco 0!", "Those things were hungry!", "Help, I'm plant food!"]
             }
         };
 
         let gameState = 'START'; 
         let score = 0;
+        let level = 1; 
+        let levelUpTimer = 0; 
         let highScore = parseInt(localStorage.getItem('pacoHighScore')) || 0;
         let currentQuote = "";
         let quoteTimer = 0;
@@ -252,7 +262,7 @@
 
         let bird = { x: 80, y: 250, width: 48, height: 38, gravity: 0.25, lift: -6, velocity: 0 };
         let pipes = [];
-        let pipeWidth = 60, pipeGap = 150, pipeSpeed = 3, frameCount = 0;
+        let pipeWidth = 60, pipeGap = 150, pipeSpeed = 3 + (score / 200);
 
         const startScreen = document.getElementById('startScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
@@ -281,7 +291,7 @@
             restartBtn.innerText = texts[lang].restartBtn;
             donateTextStart.innerText = texts[lang].donate;
             donateTextOver.innerText = texts[lang].donate;
-            langToggle.innerText = lang === 'es' ? '🇺🇸 EN' : '🇻🇪 ES';
+            langToggle.innerText = lang === 'es' ? '🇺🇸 EN' : '🇪 ES';
         }
 
         langToggle.addEventListener('click', () => { lang = lang === 'es' ? 'en' : 'es'; updateUI(); });
@@ -304,6 +314,10 @@
 
         function startGame() {
             bird.y = 250; bird.velocity = 0; pipes = []; score = 0; frameCount = 0;
+            level = 1; 
+            pipeSpeed = 3; 
+            pipeGap = 150; 
+            levelUpTimer = 0;
             scoreDisplay.innerText = score;
             startScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
@@ -319,8 +333,13 @@
         }
 
         function triggerQuote(isCrash) {
-            const arr = isCrash ? texts[lang].crashQuotes : texts[lang].quotes;
-            currentQuote = arr[Math.floor(Math.random() * arr.length)];
+            if (isCrash && level === 2) {
+                const arr = texts[lang].plantCrashQuotes;
+                currentQuote = arr[Math.floor(Math.random() * arr.length)];
+            } else {
+                const arr = isCrash ? texts[lang].crashQuotes : texts[lang].quotes;
+                currentQuote = arr[Math.floor(Math.random() * arr.length)];
+            }
             quoteTimer = 90;
         }
 
@@ -346,6 +365,7 @@
             for (let i = pipes.length - 1; i >= 0; i--) {
                 pipes[i].x -= pipeSpeed;
                 const hitboxPadding = 8;
+                
                 if (
                     bird.x + bird.width / 2 - hitboxPadding > pipes[i].x &&
                     bird.x - bird.width / 2 + hitboxPadding < pipes[i].x + pipeWidth &&
@@ -360,12 +380,21 @@
                     score++;
                     playScoreSound();
                     scoreDisplay.innerText = score;
+                    
+                    if (score >= 100 && level === 1) {
+                        level = 2;
+                        pipeSpeed = 4.2; 
+                        pipeGap = 135;   
+                        levelUpTimer = 150; 
+                        playLevelUpSound();
+                    }
                 }
 
                 if (pipes[i].x + pipeWidth < 0) pipes.splice(i, 1);
             }
 
             if (quoteTimer > 0) quoteTimer--;
+            if (levelUpTimer > 0) levelUpTimer--;
             frameCount++;
         }
 
@@ -384,7 +413,7 @@
         }
 
         // ==========================================
-        // FUNCIÓN: Dibuja el tubo con efecto 3D
+        // FUNCIÓN: Dibuja el tubo completo
         // ==========================================
         function drawPipe(x, topHeight, bottomY) {
             const capHeight = 26;
@@ -393,7 +422,7 @@
             const capX = x - capOverhang;
             const cornerRadius = 8;
 
-            // --- TUBO SUPERIOR ---
+            // --- TUBO SUPERIOR (Cuerpo) ---
             let gradient = ctx.createLinearGradient(x, 0, x + pipeWidth, 0);
             gradient.addColorStop(0, "#1e8449");
             gradient.addColorStop(0.2, "#2ecc71");
@@ -403,34 +432,12 @@
             
             ctx.fillStyle = gradient;
             ctx.fillRect(x, 0, pipeWidth, topHeight);
-            
-            ctx.fillStyle = "rgba(255, 255, 255, 0.3)"; // Brillo izquierdo
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
             ctx.fillRect(x + 4, 0, 6, topHeight);
-            
-            ctx.fillStyle = "rgba(0, 0, 0, 0.2)"; // Sombra derecha
+            ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
             ctx.fillRect(x + pipeWidth - 8, 0, 8, topHeight);
 
-            let capGradient = ctx.createLinearGradient(capX, topHeight - capHeight, capX + capWidth, topHeight);
-            capGradient.addColorStop(0, "#229954");
-            capGradient.addColorStop(0.3, "#2ecc71");
-            capGradient.addColorStop(0.6, "#58d68d");
-            capGradient.addColorStop(1, "#1e8449");
-            
-            ctx.fillStyle = capGradient;
-            if (ctx.roundRect) {
-                ctx.beginPath(); ctx.roundRect(capX, topHeight - capHeight, capWidth, capHeight, cornerRadius); ctx.fill();
-            } else {
-                ctx.fillRect(capX, topHeight - capHeight, capWidth, capHeight);
-            }
-            
-            ctx.strokeStyle = "#145a32"; ctx.lineWidth = 3;
-            if (ctx.roundRect) {
-                ctx.beginPath(); ctx.roundRect(capX, topHeight - capHeight, capWidth, capHeight, cornerRadius); ctx.stroke();
-            } else {
-                ctx.strokeRect(capX, topHeight - capHeight, capWidth, capHeight);
-            }
-
-            // --- TUBO INFERIOR ---
+            // --- TUBO INFERIOR (Cuerpo) ---
             let gradientBottom = ctx.createLinearGradient(x, bottomY, x + pipeWidth, bottomY);
             gradientBottom.addColorStop(0, "#1e8449");
             gradientBottom.addColorStop(0.2, "#2ecc71");
@@ -440,31 +447,59 @@
             
             ctx.fillStyle = gradientBottom;
             ctx.fillRect(x, bottomY, pipeWidth, canvas.height - bottomY - 80);
-            
             ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
             ctx.fillRect(x + 4, bottomY, 6, canvas.height - bottomY - 80);
-            
             ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
             ctx.fillRect(x + pipeWidth - 8, bottomY, 8, canvas.height - bottomY - 80);
 
-            let capGradientBottom = ctx.createLinearGradient(capX, bottomY, capX + capWidth, bottomY + capHeight);
-            capGradientBottom.addColorStop(0, "#229954");
-            capGradientBottom.addColorStop(0.3, "#2ecc71");
-            capGradientBottom.addColorStop(0.6, "#58d68d");
-            capGradientBottom.addColorStop(1, "#1e8449");
-            
-            ctx.fillStyle = capGradientBottom;
+            // --- TAPA SUPERIOR (Siempre verde, en ambos niveles) ---
+            let capGradient = ctx.createLinearGradient(capX, topHeight - capHeight, capX + capWidth, topHeight);
+            capGradient.addColorStop(0, "#229954");
+            capGradient.addColorStop(0.3, "#2ecc71");
+            capGradient.addColorStop(0.6, "#58d68d");
+            capGradient.addColorStop(1, "#1e8449");
+            ctx.fillStyle = capGradient;
             if (ctx.roundRect) {
-                ctx.beginPath(); ctx.roundRect(capX, bottomY, capWidth, capHeight, cornerRadius); ctx.fill();
+                ctx.beginPath(); ctx.roundRect(capX, topHeight - capHeight, capWidth, capHeight, cornerRadius); ctx.fill();
             } else {
-                ctx.fillRect(capX, bottomY, capWidth, capHeight);
+                ctx.fillRect(capX, topHeight - capHeight, capWidth, capHeight);
             }
-            
             ctx.strokeStyle = "#145a32"; ctx.lineWidth = 3;
             if (ctx.roundRect) {
-                ctx.beginPath(); ctx.roundRect(capX, bottomY, capWidth, capHeight, cornerRadius); ctx.stroke();
+                ctx.beginPath(); ctx.roundRect(capX, topHeight - capHeight, capWidth, capHeight, cornerRadius); ctx.stroke();
+            }
+
+            // --- TAPA INFERIOR (Nivel 1: Verde, Nivel 2: Planta carnívora) ---
+            if (level === 1) {
+                let capGradientBottom = ctx.createLinearGradient(capX, bottomY, capX + capWidth, bottomY + capHeight);
+                capGradientBottom.addColorStop(0, "#229954");
+                capGradientBottom.addColorStop(0.3, "#2ecc71");
+                capGradientBottom.addColorStop(0.6, "#58d68d");
+                capGradientBottom.addColorStop(1, "#1e8449");
+                ctx.fillStyle = capGradientBottom;
+                if (ctx.roundRect) {
+                    ctx.beginPath(); ctx.roundRect(capX, bottomY, capWidth, capHeight, cornerRadius); ctx.fill();
+                } else {
+                    ctx.fillRect(capX, bottomY, capWidth, capHeight);
+                }
+                ctx.strokeStyle = "#145a32"; ctx.lineWidth = 3;
+                if (ctx.roundRect) {
+                    ctx.beginPath(); ctx.roundRect(capX, bottomY, capWidth, capHeight, cornerRadius); ctx.stroke();
+                }
             } else {
-                ctx.strokeRect(capX, bottomY, capWidth, capHeight);
+                // Nivel 2: Planta carnívora solo en el tubo inferior
+                if (carnivorousPlant.complete && carnivorousPlant.naturalHeight !== 0) {
+                    // Tamaño ajustado: un poco más ancho que el tubo para que se vea bien
+                    const plantWidth = 80;
+                    const plantHeight = 80;
+                    
+                    // Posicionar la planta centrada sobre el tubo inferior
+                    // La maceta queda sobre la tapa del tubo, las cabezas apuntan hacia arriba
+                    const plantX = x + (pipeWidth - plantWidth) / 2;
+                    const plantY = bottomY - plantHeight + 10; // Ajuste para que la maceta quede sobre el tubo
+                    
+                    ctx.drawImage(carnivorousPlant, plantX, plantY, plantWidth, plantHeight);
+                }
             }
         }
 
@@ -472,18 +507,22 @@
         // FUNCIÓN PRINCIPAL DE DIBUJO
         // ==========================================
         function draw() {
+            // Fondo: SIEMPRE cielo azul, en ambos niveles
             ctx.fillStyle = "#70c5ce";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // Dibujar obstáculos
             for (let p of pipes) {
                 drawPipe(p.x, p.topHeight, p.bottomY);
             }
 
+            // Suelo
             ctx.fillStyle = "#ded895";
             ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
             ctx.fillStyle = "#8b4513";
             ctx.fillRect(0, canvas.height - 80, canvas.width, 10);
 
+            // Dibujar loro
             const activeParrotImage = (lang === 'es') ? parrotVE : parrotUS;
             if (activeParrotImage.complete && activeParrotImage.naturalHeight !== 0) {
                 ctx.drawImage(activeParrotImage, bird.x - bird.width / 2, bird.y - bird.height / 2, bird.width, bird.height);
@@ -494,6 +533,7 @@
                 ctx.fillRect(bird.x + bird.width/4, bird.y - bird.height/4, 6, 6);
             }
 
+            // Burbuja de diálogo
             if (quoteTimer > 0) {
                 ctx.save();
                 ctx.font = "bold 13px sans-serif";
@@ -517,6 +557,23 @@
 
                 ctx.fillStyle = "#222";
                 ctx.fillText(currentQuote, bubbleX, bubbleY + 4);
+                ctx.restore();
+            }
+
+            // Mensaje de Subida de Nivel
+            if (levelUpTimer > 0) {
+                ctx.save();
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.fillRect(0, canvas.height/2 - 40, canvas.width, 80);
+                
+                ctx.fillStyle = "#ffcc00";
+                ctx.font = "bold 26px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("¡NIVEL 2!", canvas.width/2, canvas.height/2 - 5);
+                
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 16px sans-serif";
+                ctx.fillText("¡CUIDADO CON LAS PLANTAS!", canvas.width/2, canvas.height/2 + 20);
                 ctx.restore();
             }
         }
@@ -555,6 +612,22 @@
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
                 osc.connect(gain); gain.connect(audioCtx.destination);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            } catch (e) {}
+        }
+
+        function playLevelUpSound() {
+            try {
+                if (!audioCtx) return;
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(554, audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
             } catch (e) {}
         }
 
