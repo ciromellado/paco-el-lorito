@@ -184,14 +184,20 @@
                 <div class="score-display" id="scoreDisplay">0</div>
             </div>
 
-            <div id="startScreen" class="center-screen">
+           <div id="startScreen" class="center-screen">
+                
+                <!-- CONTADOR DE VISITAS (ARRIBA DEL TODO) -->
+                <div style="margin-bottom: 12px; font-size: 12px; color: #aaa; letter-spacing: 0.5px;">
+                    👁️ <span id="visit-counter" style="color: #ffcc00; font-weight: bold; font-size: 14px;">...</span> jugadores han volado
+                </div>
+                <!-- FIN CONTADOR -->
+
                 <h1 id="titleText">Paco: El Loro Parlanchín</h1>
                 <div id="instructionText" class="instructions-box"></div>
                 <button class="action-btn" id="startBtn">¡A Volar!</button>
                 <button class="install-btn hidden" id="installBtn">📱 Instalar App</button>
                 <a href="https://ko-fi.com/ciroypaco" target="_blank" class="donate-btn" id="donateTextStart">🫓 Donar una arepita a Paco</a>
             </div>
-
             <div id="gameOverScreen" class="center-screen hidden">
                 <h1 id="gameOverTitle">¡Pachanga rota!</h1>
                 <p id="quoteText" style="font-style: italic; color: #ffcc00; margin-bottom: 15px;">"¡Me mareé!"</p>
@@ -814,6 +820,27 @@
             installBtn.classList.add('hidden');
             console.log('✅ PWA instalada correctamente');
         });
+         // CONTADOR DE VISITAS (CountAPI)
+        // ==========================================
+        function updateVisitCounter() {
+            const counterElement = document.getElementById('visit-counter');
+            // Usamos un namespace único: 'ciroypaco-paco'
+            const apiUrl = 'https://api.counterapi.dev/v1/ciroypaco-paco/visitas/up';
+            
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    // Formatea el número con comas (ej: 1,234)
+                    counterElement.innerText = data.count.toLocaleString();
+                })
+                .catch(error => {
+                    console.warn('No se pudo cargar el contador:', error);
+                    counterElement.innerText = '∞'; // Muestra un infinito si falla
+                });
+        }
+
+        // Llama a la función cuando la página carga
+        document.addEventListener('DOMContentLoaded', updateVisitCounter);
     </script>
 </body>
 </html>
