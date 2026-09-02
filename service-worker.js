@@ -1,4 +1,4 @@
-const CACHE_NAME = 'loro-paco-v12';
+const CACHE_NAME = 'loro-paco-v13';
 const urlsToCache = [
   './',
   './index.html',
