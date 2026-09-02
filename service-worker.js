@@ -1,35 +1,34 @@
-// Service Worker simple y funcional para Paco el Loro
-const CACHE_NAME = 'paco-loro-v11';
+const CACHE_NAME = 'loro-paco-v12';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/images/loritovenezolano.png',
+  '/images/lorito-gringo.png',
+  '/images/icon-192.png',
+  '/images/icon-512.png'
+  '/images/planta-carnivora.png'
 ];
 
-// Instalación del Service Worker
-self.addEventListener('install', event => {
-  console.log('[ServiceWorker] Instalando...');
+// Instalación: cachea todos los archivos
+self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[ServiceWorker] Cache abierto');
+      .then((cache) => {
+        console.log('Archivos cacheados correctamente');
         return cache.addAll(urlsToCache);
-      })
-      .catch(error => {
-        console.log('[ServiceWorker] Error al cachear:', error);
       })
   );
 });
 
-// Activación del Service Worker
-self.addEventListener('activate', event => {
-  console.log('[ServiceWorker] Activando...');
+// Activación: limpia caches antiguas si actualizas la versión
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map(cacheName => {
+        cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[ServiceWorker] Eliminando cache viejo:', cacheName);
+            console.log('Borrando cache antigua:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -38,15 +37,13 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Interceptación de peticiones
-self.addEventListener('fetch', event => {
+// Intercepta las peticiones: si hay internet, usa la red; si no, usa el cache
+self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
+      .then((response) => {
+        // Si está en cache, lo devuelve; si no, lo pide a la red
+        return response || fetch(event.request);
       })
   );
 });
